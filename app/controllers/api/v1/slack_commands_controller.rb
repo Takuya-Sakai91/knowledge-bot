@@ -29,14 +29,19 @@ class Api::V1::SlackCommandsController < ApplicationController
         # パラメータが不足している場合の使用方法をSlackに返す
         render json: { text: "🤔 使用方法: /memo [カテゴリ] [キーワード] [内容]" }
       end
-    elsif params[:command] == '/search'
-      # Slackからのテキストをスペースで2つに分割
-      category, keyword = params[:text].split(' ')
+    elsif params[:command] == '/find'
+      # Slackからのテキストを検索キーワードとして取得
+      search_term = params[:text]
 
-      # 必須項目が入力されているかチェック
-      if category.present? && keyword.present?
-        # カテゴリとキーワードでナレッジを検索
-        knowledges = Knowledge.where(category: category, keyword: keyword)
+      # 検索キーワードが入力されているかチェック
+      if search_term.present?
+        # カテゴリ、キーワード、内容のいずれかに検索キーワードが含まれるナレッジを検索 (部分一致)
+        # `ILIKE`はPostgreSQLで使用できる、大文字小文字を区別しないLIKE
+        wildcard_term = "%#{search_term}%"
+        knowledges = Knowledge.where(
+          "category ILIKE ? OR keyword ILIKE ? OR content ILIKE ?",
+          wildcard_term, wildcard_term, wildcard_term
+        )
 
         if knowledges.present?
           # 見つかったナレッジの内容を整形して返す
@@ -46,14 +51,14 @@ class Api::V1::SlackCommandsController < ApplicationController
           render json: { text: response_text }
         else
           # 見つからなかった場合のメッセージ
-          render json: { text: "🤷‍♀️ ナレッジが見つかりませんでした: `#{category}/#{keyword}`" }
+          render json: { text: "🤷‍♀️ ナレッジが見つかりませんでした: `#{search_term}`" }
         end
       else
         # パラメータが不足している場合の使用方法をSlackに返す
-        render json: { text: "🤔 使用方法: /search [カテゴリ] [キーワード]" }
+        render json: { text: "🤔 使用方法: /find [検索キーワード]" }
       end
     else
-      # '/memo'以外のコマンドが送られてきた場合のメッセージ
+      # '/memo'や'/find'以外のコマンドが送られてきた場合のメッセージ
       render json: { text: "🤨 そのコマンドは知りません: #{params[:command]}" }
     end
   end
