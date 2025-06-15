@@ -45,10 +45,8 @@ class Api::V1::SlackCommandsController < ApplicationController
     # リクエストヘッダーからタイムスタンプと署名を取得
     timestamp = request.headers['X-Slack-Request-Timestamp']
     signature = request.headers['X-Slack-Signature']
-    # リクエストのボディ（生データ）を取得
-    request_body = request.body.read
-    # 読み取ったリクエストボディを再度読み取れるように巻き戻す
-    request.body.rewind
+    # request.body.read はparamsが生成されると空になるため、生のPOSTデータを取得する
+    request_body = request.raw_post
 
     # 2. そもそも情報が足りない場合は不正なリクエストとして弾く
     if signing_secret.nil? || timestamp.nil? || signature.nil?
