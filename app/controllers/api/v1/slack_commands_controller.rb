@@ -69,13 +69,6 @@ class Api::V1::SlackCommandsController < ApplicationController
     # 6. 計算した署名と、Slackから送られてきた署名が一致するかどうかを安全な方法で比較する
     # 一致しなければ不正なリクエストとして弾く
     unless ActiveSupport::SecurityUtils.secure_compare(my_signature, signature)
-      # --- デバッグ用ログ出力ここから ---
-      Rails.logger.info "署名検証失敗:"
-      Rails.logger.info "  > Slackからの署名: #{signature}"
-      Rails.logger.info "  > 計算した署名:   #{my_signature}"
-      Rails.logger.info "  > タイムスタンプ:   #{timestamp}"
-      Rails.logger.info "  > リクエストボディ: #{request_body}"
-      # --- デバッグ用ログ出力ここまで ---
       return head :unauthorized
     end
   end
