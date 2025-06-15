@@ -1,8 +1,4 @@
 class Api::V1::SlackCommandsController < ApplicationController
-  # Slackからのリクエストの正当性を検証するために、RailsのCSRF保護を一時的に無効にします。
-  # Slackは独自の方法（署名検証）でリクエストの信頼性を保証します。
-  skip_before_action :verify_authenticity_token
-
   def commands
     # Slackからのリクエストのコマンドが'/memo'であるかを確認
     if params[:command] == '/memo'
