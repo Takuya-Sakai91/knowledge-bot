@@ -1,4 +1,7 @@
 class Api::V1::SlackCommandsController < ApplicationController
+  # `commands`アクションの前に、必ず`verify_slack_request`メソッドを実行する
+  before_action :verify_slack_request
+
   def commands
     # Slackからのリクエストのコマンドが'/memo'であるかを確認
     if params[:command] == '/memo'
@@ -27,6 +30,44 @@ class Api::V1::SlackCommandsController < ApplicationController
     else
       # '/memo'以外のコマンドが送られてきた場合のメッセージ
       render json: { text: "🤨 そのコマンドは知りません: #{params[:command]}" }
+    end
+  end
+
+  private
+
+  # Slackからのリクエストが正当なものか検証するメソッド
+  def verify_slack_request
+    # 1. 必要な情報を取得
+    # 環境変数からSigning Secretを取得
+    signing_secret = ENV['SLACK_SIGNING_SECRET']
+    # リクエストヘッダーからタイムスタンプと署名を取得
+    timestamp = request.headers['X-Slack-Request-Timestamp']
+    signature = request.headers['X-Slack-Signature']
+    # リクエストのボディ（生データ）を取得
+    request_body = request.body.read
+
+    # 2. そもそも情報が足りない場合は不正なリクエストとして弾く
+    if signing_secret.nil? || timestamp.nil? || signature.nil?
+      return head :bad_request
+    end
+
+    # 3. タイムスタンプが古すぎる場合はリプレイ攻撃とみなし、リクエストを弾く
+    # (5分以上前のリクエストは無効)
+    if Time.at(timestamp.to_i) < 5.minutes.ago
+      return head :unauthorized
+    end
+
+    # 4. Slackの仕様通りに、署名の元となる文字列を組み立てる
+    # フォーマット: "v0:[タイムスタンプ]:[リクエストボディ]"
+    sig_basestring = "v0:#{timestamp}:#{request_body}"
+
+    # 5. 組み立てた文字列とSigning Secretを使って、こちら側で署名を計算する
+    my_signature = "v0=" + OpenSSL::HMAC.hexdigest("SHA256", signing_secret, sig_basestring)
+
+    # 6. 計算した署名と、Slackから送られてきた署名が一致するかどうかを安全な方法で比較する
+    # 一致しなければ不正なリクエストとして弾く
+    unless ActiveSupport::SecurityUtils.secure_compare(my_signature, signature)
+      return head :unauthorized
     end
   end
 end
