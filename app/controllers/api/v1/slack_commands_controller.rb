@@ -1,3 +1,5 @@
+require 'openssl' # 署名検証のために追加
+
 class Api::V1::SlackCommandsController < ApplicationController
   # `commands`アクションの前に、必ず`verify_slack_request`メソッドを実行する
   before_action :verify_slack_request
@@ -45,6 +47,8 @@ class Api::V1::SlackCommandsController < ApplicationController
     signature = request.headers['X-Slack-Signature']
     # リクエストのボディ（生データ）を取得
     request_body = request.body.read
+    # 読み取ったリクエストボディを再度読み取れるように巻き戻す
+    request.body.rewind
 
     # 2. そもそも情報が足りない場合は不正なリクエストとして弾く
     if signing_secret.nil? || timestamp.nil? || signature.nil?
