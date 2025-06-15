@@ -1,24 +1,69 @@
-# README
+# Knowledge Bot
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+## 概要
 
-Things you may want to cover:
+業務や技術学習で得た知識を即座に Slack 上で蓄積・検索できる、個人専用のナレッジベースです。「あれどうやるんだっけ？」を Slack コマンドで即座に解決し、散在する知識の一元管理を実現します。
 
-* Ruby version
+## 機能
 
-* System dependencies
+- **/memo [カテゴリ] [キーワード] [内容]**: 新しい知識を登録します。
+- **/search [検索ワード]**: 登録した知識を横断的に検索します。（実装予定）
+- **/list [カテゴリ]**: 指定したカテゴリの知識を一覧表示します。（実装予定）
+- **/categories**: 登録済みのカテゴリを一覧表示します。（実装予定）
+- **/random**: 登録した知識をランダムに表示し、復習を促します。（実装予定）
 
-* Configuration
+## 技術スタック
 
-* Database creation
+- **Backend**: Ruby on Rails 7.x (API mode)
+- **Database**: PostgreSQL
+- **Hosting**: Fly.io
+- **External API**: Slack Web API (Slash Commands)
 
-* Database initialization
+## セットアップ手順
 
-* How to run the test suite
+### 1. ローカル環境の準備
 
-* Services (job queues, cache servers, search engines, etc.)
+```bash
+# リポジトリをクローン
+git clone https://github.com/Takuya-Sakai91/knowledge-bot.git
+cd knowledge-bot
 
-* Deployment instructions
+# 依存関係をインストール
+bundle install
 
-* ...
+# データベースを作成
+rails db:create
+rails db:migrate
+```
+
+### 2. Slack App の設定
+
+1. [Slack API](https://api.slack.com/apps) で新しいアプリを作成します。
+2. **Slash Commands** を有効にし、`/memo` コマンドを作成します。
+3. **Request URL** にデプロイしたアプリケーションの URL (`https://knowledge-bot-takuya-sakai.fly.dev/api/v1/slack_commands/commands`) を設定します。
+4. **OAuth & Permissions** で `commands` スコープをアプリに追加します。
+5. アプリをワークスペースにインストールします。
+6. **Basic Information** ページで **Signing Secret** を取得し、環境変数 `SLACK_SIGNING_secret` として設定します。（この後のセキュリティ向上のステップで実装します）
+
+### 3. Fly.io へのデプロイ
+
+本プロジェクトは Fly.io へのデプロイを前提としています。`flyctl` がインストールされている必要があります。
+
+```bash
+# アプリケーションを初めてデプロイする場合
+fly launch
+
+# 2回目以降のデプロイ
+fly deploy
+```
+
+## データモデル
+
+### Knowledge
+
+| カラム名   | データ型 | 説明             |
+| ---------- | -------- | ---------------- |
+| `id`       | `bigint` | 主キー           |
+| `category` | `string` | 知識のカテゴリ   |
+| `keyword`  | `string` | 検索用キーワード |
+| `content`  | `text`   | 知識の内容       |
