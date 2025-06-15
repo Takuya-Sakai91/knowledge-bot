@@ -1,4 +1,5 @@
 Rails.application.routes.draw do
+  get "/up", to: "health#check"
   namespace :api do
     namespace :v1 do
       post 'slack_commands/commands'
