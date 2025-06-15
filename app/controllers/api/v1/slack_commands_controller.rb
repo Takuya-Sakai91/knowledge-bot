@@ -29,6 +29,29 @@ class Api::V1::SlackCommandsController < ApplicationController
         # パラメータが不足している場合の使用方法をSlackに返す
         render json: { text: "🤔 使用方法: /memo [カテゴリ] [キーワード] [内容]" }
       end
+    elsif params[:command] == '/search'
+      # Slackからのテキストをスペースで2つに分割
+      category, keyword = params[:text].split(' ')
+
+      # 必須項目が入力されているかチェック
+      if category.present? && keyword.present?
+        # カテゴリとキーワードでナレッジを検索
+        knowledges = Knowledge.where(category: category, keyword: keyword)
+
+        if knowledges.present?
+          # 見つかったナレッジの内容を整形して返す
+          response_text = knowledges.map.with_index(1) do |k, i|
+            "📖 *#{i}. #{k.category}/#{k.keyword}*\n> #{k.content}"
+          end.join("\n\n")
+          render json: { text: response_text }
+        else
+          # 見つからなかった場合のメッセージ
+          render json: { text: "🤷‍♀️ ナレッジが見つかりませんでした: `#{category}/#{keyword}`" }
+        end
+      else
+        # パラメータが不足している場合の使用方法をSlackに返す
+        render json: { text: "🤔 使用方法: /search [カテゴリ] [キーワード]" }
+      end
     else
       # '/memo'以外のコマンドが送られてきた場合のメッセージ
       render json: { text: "🤨 そのコマンドは知りません: #{params[:command]}" }
