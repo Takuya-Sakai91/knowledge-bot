@@ -1,34 +1,52 @@
 require 'openssl'
 require 'json'
+require 'http'
 
 class Api::V1::SlackInteractionsController < ApplicationController
   before_action :verify_slack_request, only: [:create]
+  before_action :parse_slack_payload, only: [:create]
 
   def create
-    payload = JSON.parse(params[:payload])
-
-    # どのボタンが押されたかに応じて処理を分岐
-    action_id = payload['actions'][0]['action_id']
+    action_id = @payload.dig(:actions, 0, :action_id)
 
     if action_id == 'delete_knowledge'
-      knowledge_id = payload['actions'][0]['value']
-      knowledge = Knowledge.find_by(id: knowledge_id)
-
-      if knowledge
-        knowledge.destroy
-        # ここではシンプルに200 OKを返し、何もしない
-        head :ok
-      else
-        # ナレッジが見つからない場合
-        head :not_found
-      end
+      handle_delete_knowledge
     else
-      # 不明なアクション
       head :bad_request
     end
   end
 
   private
+
+  def handle_delete_knowledge
+    knowledge_id = @payload.dig(:actions, 0, :value)
+    knowledge = Knowledge.find_by(id: knowledge_id)
+
+    if knowledge
+      knowledge.destroy
+      update_original_message("✅ ナレッジ「#{truncate(knowledge.content)}」を削除しました。")
+    else
+      update_original_message("🤯 削除に失敗しました。指定されたナレッジが見つかりません。")
+    end
+  end
+
+  def update_original_message(text)
+    response_url = @payload[:response_url]
+
+    updated_message = {
+      replace_original: "true",
+      text: text
+    }
+
+    # response_urlに対してPOSTリクエストを送る
+    HTTP.post(response_url, json: updated_message)
+
+    head :ok
+  end
+
+  def truncate(text, length: 20)
+    text.length > length ? "#{text[0...length]}..." : text
+  end
 
   # SlackCommandsControllerからコピーした署名検証ロジック
   def verify_slack_request

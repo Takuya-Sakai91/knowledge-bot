@@ -48,5 +48,6 @@ group :development do
 end
 
 gem "slack-ruby-client"
+gem "http"
 
 gem "dockerfile-rails", ">= 1.7", :group => :development
