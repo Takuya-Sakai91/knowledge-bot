@@ -11,21 +11,21 @@
 ナレッジを登録します。カテゴリは省略可能です。
 
 - **フォーマット**: `/memo [カテゴリ] [内容]`
-- **例**: `/memo Ruby on Rails Active RecordのN+1問題はincludesで解決する`
+- **例**: `/memo Rails DBカラムの追加は rails g migration AddColumnToTable column:type`
 
 ### `/find`
 
-登録したナレッジを内容（content）からキーワードで検索します。
+登録したナレッジを内容（content）からキーワードで検索します。検索結果には、ナレッジを直接削除できるボタンが表示されます。
 
 - **フォーマット**: `/find [検索キーワード]`
-- **例**: `/find raw_post`
+- **例**: `/find migration`
 
 ### `/list`
 
-指定したカテゴリのナレッジを一覧表示します。
+指定したカテゴリのナレッジを一覧表示します。検索結果には、ナレッジを直接削除できるボタンが表示されます。
 
 - **フォーマット**: `/list [カテゴリ]`
-- **例**: `/list rails`
+- **例**: `/list Rails`
 
 ### `/categories`
 
@@ -33,16 +33,12 @@
 
 - **フォーマット**: `/categories`
 
-### 実装予定の機能
-
-- **/random**: 登録した知識をランダムに表示し、復習を促します。
-
 ## 技術スタック
 
 - **Backend**: Ruby on Rails 7.x (API mode)
 - **Database**: PostgreSQL
 - **Hosting**: Fly.io
-- **External API**: Slack Web API (Slash Commands)
+- **External API**: Slack Web API (Slash Commands, Interactivity)
 
 ## セットアップ手順
 
@@ -64,11 +60,15 @@ rails db:migrate
 ### 2. Slack App の設定
 
 1. [Slack API](https://api.slack.com/apps) で新しいアプリを作成します。
-2. **Slash Commands** を有効にし、`/memo` コマンドを作成します。
-3. **Request URL** にデプロイしたアプリケーションの URL (`https://knowledge-bot-takuya-sakai.fly.dev/api/v1/slack_commands/commands`) を設定します。
-4. **OAuth & Permissions** で `commands` スコープをアプリに追加します。
+2. **Slash Commands** を有効にし、`/memo`, `/find`, `/list`, `/categories` コマンドを作成します。
+   - **Request URL**には、デプロイしたアプリケーションの URL `https://<あなたのアプリ名>.fly.dev/api/v1/slack_commands` を設定します。
+3. **Interactivity & Shortcuts** を有効にします。
+   - **Request URL**には `https://<あなたのアプリ名>.fly.dev/api/v1/slack_interactions` を設定します。
+4. **OAuth & Permissions** で以下のスコープをアプリに追加します。
+   - `commands`
 5. アプリをワークスペースにインストールします。
-6. **Basic Information** ページで **Signing Secret** を取得し、環境変数 `SLACK_SIGNING_secret` として設定します。（この後のセキュリティ向上のステップで実装します）
+6. **Basic Information** ページで **Signing Secret** を取得し、`SLACK_SIGNING_SECRET` として Fly.io の環境変数に設定します。
+7. **OAuth & Permissions** ページで **Bot User OAuth Token** (`xoxb-`で始まる)を取得し、`SLACK_API_TOKEN` として Fly.io の環境変数に設定します。
 
 ### 3. Fly.io へのデプロイ
 
