@@ -26,9 +26,62 @@ class Api::V1::SlackCommandsController < ApplicationController
       knowledges = Knowledge.search(keyword)
 
       if knowledges.present?
-        response_text = "🔍「#{keyword}」に一致するナレッジが見つかりました！\n\n"
-        response_text += knowledges.map { |k| "*カテゴリ: #{k.category}*\n> #{k.content}" }.join("\n\n")
-        render json: { text: response_text }
+        blocks = []
+        blocks << {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: "🔍「#{keyword}」に一致するナレッジが見つかりました！"
+          }
+        }
+        blocks << { type: "divider" }
+
+        knowledges.each do |k|
+          blocks << {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: "*カテゴリ: #{k.category}*\n> #{k.content}"
+            }
+          }
+          blocks << {
+            type: "actions",
+            elements: [
+              {
+                type: "button",
+                text: {
+                  type: "plain_text",
+                  text: "削除",
+                  emoji: true
+                },
+                style: "danger",
+                value: k.id.to_s,
+                action_id: "delete_knowledge",
+                confirm: {
+                  title: {
+                    type: "plain_text",
+                    text: "本当に削除しますか？"
+                  },
+                  text: {
+                    type: "mrkdwn",
+                    text: "このナレッジを削除すると元に戻せません。"
+                  },
+                  confirm: {
+                    type: "plain_text",
+                    text: "削除する"
+                  },
+                  deny: {
+                    type: "plain_text",
+                    text: "キャンセル"
+                  }
+                }
+              }
+            ]
+          }
+          blocks << { type: "divider" }
+        end
+
+        render json: { blocks: blocks }
       else
         render json: { text: "🤔「#{keyword}」に一致するナレッジは見つかりませんでした。" }
       end
@@ -37,9 +90,55 @@ class Api::V1::SlackCommandsController < ApplicationController
       if category.present?
         knowledges = Knowledge.where(category: category)
         if knowledges.present?
-          response_text = "📚 カテゴリ「#{category}」のナレッジ一覧です。\n"
-          response_text += knowledges.map { |k| "> • #{k.content}" }.join("\n")
-          render json: { text: response_text }
+          blocks = []
+          blocks << {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: "📚 カテゴリ「#{category}」のナレッジ一覧です。"
+            }
+          }
+          blocks << { type: "divider" }
+
+          knowledges.each do |k|
+            blocks << {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: "> #{k.content}"
+              },
+              accessory: {
+                type: "button",
+                text: {
+                  type: "plain_text",
+                  text: "削除",
+                  emoji: true
+                },
+                style: "danger",
+                value: k.id.to_s,
+                action_id: "delete_knowledge",
+                confirm: {
+                  title: {
+                    type: "plain_text",
+                    text: "本当に削除しますか？"
+                  },
+                  text: {
+                    type: "mrkdwn",
+                    text: "このナレッジを削除すると元に戻せません。"
+                  },
+                  confirm: {
+                    type: "plain_text",
+                    text: "削除する"
+                  },
+                  deny: {
+                    type: "plain_text",
+                    text: "キャンセル"
+                  }
+                }
+              }
+            }
+          end
+          render json: { blocks: blocks }
         else
           render json: { text: "🤔 カテゴリ「#{category}」にはナレッジが登録されていません。" }
         end
