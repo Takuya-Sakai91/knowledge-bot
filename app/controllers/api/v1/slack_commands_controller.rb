@@ -10,46 +10,53 @@ class Api::V1::SlackCommandsController < ApplicationController
       category, content = params[:text].split(' ', 2)
       if content.nil?
         content = category
-        category = nil
+        category = "未分類"
       end
 
       knowledge = Knowledge.new(category: category, content: content)
 
       if knowledge.save
-        render plain: "ナレッジを登録しました：「#{content}」"
+        response_text = "📝 ナレッジを登録しました！\n> カテゴリ: `#{knowledge.category}`\n> 内容: #{knowledge.content}"
+        render json: { text: response_text }
       else
-        render plain: "エラーが発生しました: #{knowledge.errors.full_messages.join(', ')}", status: :internal_server_error
+        render json: { text: "🤯 エラーが発生しました: #{knowledge.errors.full_messages.join(', ')}" }
       end
     when '/find'
       keyword = params[:text]
       knowledges = Knowledge.search(keyword)
 
       if knowledges.present?
-        render plain: knowledges.map { |k| "- #{k.content}" }.join("\n")
+        response_text = "🔍「#{keyword}」に一致するナレッジが見つかりました！\n\n"
+        response_text += knowledges.map { |k| "*カテゴリ: #{k.category}*\n> #{k.content}" }.join("\n\n")
+        render json: { text: response_text }
       else
-        render plain: "「#{keyword}」に一致するナレッジは見つかりませんでした。"
+        render json: { text: "🤔「#{keyword}」に一致するナレッジは見つかりませんでした。" }
       end
     when '/list'
       category = params[:text].strip
       if category.present?
         knowledges = Knowledge.where(category: category)
         if knowledges.present?
-          render plain: knowledges.map { |k| "- #{k.content}" }.join("\n")
+          response_text = "📚 カテゴリ「#{category}」のナレッジ一覧です。\n"
+          response_text += knowledges.map { |k| "> • #{k.content}" }.join("\n")
+          render json: { text: response_text }
         else
-          render plain: "カテゴリ「#{category}」にはナレッジが登録されていません。"
+          render json: { text: "🤔 カテゴリ「#{category}」にはナレッジが登録されていません。" }
         end
       else
-        render plain: "カテゴリを指定してください。例: /list Ruby"
+        render json: { text: "🤔 カテゴリを指定してください。例: /list Ruby" }
       end
     when '/categories'
       categories = Knowledge.categories
       if categories.present?
-        render plain: "登録されているカテゴリ一覧:\n- #{categories.join("\n- ")}"
+        response_text = "🗂️ 登録されているカテゴリ一覧です。\n"
+        response_text += categories.map { |c| "> • #{c}" }.join("\n")
+        render json: { text: response_text }
       else
-        render plain: "登録されているカテゴリはありません。"
+        render json: { text: "🤔 登録されているカテゴリはありません。" }
       end
     else
-      render plain: "不明なコマンドです: #{params[:command]}"
+      render json: { text: "🤔 不明なコマンドです: #{params[:command]}" }
     end
   end
 
